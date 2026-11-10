@@ -141,7 +141,20 @@ describe('Comparison workflow', () => {
     fixture.detectChanges();
 
     const report = `${api}/${id}/report`;
+    const evidence = `${api}/${id}`;
+    vi.useFakeTimers();
     click('Exportar relatório');
+    http.expectOne({ method: 'GET', url: evidence }).flush(null, {
+      status: 503,
+      statusText: 'Unavailable',
+    });
+    fixture.detectChanges();
+    expect(page.textContent).toContain('Exportando relatório');
+    http.expectNone(report);
+    await vi.advanceTimersByTimeAsync(1_500);
+    http.expectOne({ method: 'GET', url: evidence }).flush(result);
+    await Promise.resolve();
+    await Promise.resolve();
     http.expectOne({ method: 'POST', url: report }).flush(null, {
       status: 503,
       statusText: 'Unavailable',
@@ -151,6 +164,9 @@ describe('Comparison workflow', () => {
     expect(page.textContent).toContain('Não foi possível salvar o relatório.');
 
     click('Exportar relatório');
+    http.expectOne({ method: 'GET', url: evidence }).flush(result);
+    await Promise.resolve();
+    await Promise.resolve();
     http.expectOne({ method: 'POST', url: report }).flush(null, {
       status: 204,
       statusText: 'No Content',
@@ -165,10 +181,12 @@ describe('Comparison workflow', () => {
     expect(page.textContent).toContain('O relatório foi salvo, mas o download falhou.');
 
     click('Exportar relatório');
+    http.expectOne({ method: 'GET', url: evidence }).flush(result);
+    await Promise.resolve();
+    await Promise.resolve();
     http.expectNone({ method: 'POST', url: report });
     const download = http.expectOne({ method: 'GET', url: report });
     expect(download.request.responseType).toBe('blob');
-    vi.useFakeTimers();
     const revoke = vi.fn();
     vi.stubGlobal(
       'URL',

@@ -2,9 +2,11 @@ import { HttpClient } from '@angular/common/http';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { Comparison, Step } from './comparison';
+import { waitForReadiness } from './service-readiness';
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const dateTime = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+const REPORT_TIMEOUT = 20_000;
 
 @Component({
   selector: 'app-comparison-result',
@@ -42,18 +44,27 @@ export class ComparisonResult {
     if (this.exporting()) return;
 
     const id = this.comparison().id;
-    const url = `/api/comparisons/${encodeURIComponent(id)}/report`;
+    const comparisonUrl = `/api/comparisons/${encodeURIComponent(id)}`;
+    const url = `${comparisonUrl}/report`;
     this.exporting.set(true);
     this.exportFeedback.set(null);
 
     try {
+      if (!(await waitForReadiness(this.http, comparisonUrl))) {
+        this.exportFeedback.set({
+          error: true,
+          message: 'Não foi possível consultar esta execução. Tente exportar novamente.',
+        });
+        return;
+      }
+
       if (!this.reportSaved) {
-        await firstValueFrom(this.http.post(url, null, { timeout: 10_000 }));
+        await firstValueFrom(this.http.post(url, null, { timeout: REPORT_TIMEOUT }));
         this.reportSaved = true;
       }
 
       const report = await firstValueFrom(
-        this.http.get(url, { responseType: 'blob', timeout: 10_000 }),
+        this.http.get(url, { responseType: 'blob', timeout: REPORT_TIMEOUT }),
       );
       const objectUrl = URL.createObjectURL(report);
       const download = document.createElement('a');

@@ -3,6 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { firstValueFrom, timer } from 'rxjs';
 import { Comparison } from './comparison';
 import { ComparisonResult } from './comparison-result';
+import { waitForReadiness } from './service-readiness';
 
 type ViewState =
   | { kind: 'idle' | 'starting' }
@@ -13,8 +14,6 @@ type ViewState =
 
 const COMPARISONS = '/api/comparisons';
 const REQUEST_TIMEOUT = 5_000;
-const READINESS_LIMIT = 110_000;
-const READINESS_TIMEOUT = 10_000;
 const POLL_INTERVAL = 750;
 const POLL_LIMIT = 20_000;
 const RETRYABLE_STATUSES = [0, 404, 502, 503, 504];
@@ -39,7 +38,7 @@ export class App {
 
     this.state.set({ kind: 'starting' });
 
-    if (!(await this.waitForServices())) {
+    if (!(await waitForReadiness(this.http, '/api/readiness', true))) {
       this.state.set({
         kind: 'error',
         message: 'Os serviços ainda estão iniciando. Tente novamente em instantes.',
@@ -62,29 +61,6 @@ export class App {
     }
 
     await this.poll(id);
-  }
-
-  private async waitForServices(): Promise<boolean> {
-    const deadline = Date.now() + READINESS_LIMIT;
-    while (Date.now() < deadline) {
-      try {
-        await firstValueFrom(
-          this.http.get<void>('/api/readiness', {
-            timeout: Math.min(READINESS_TIMEOUT, deadline - Date.now()),
-          }),
-        );
-        return true;
-      } catch (error) {
-        if (!(error instanceof HttpErrorResponse) || !RETRYABLE_STATUSES.includes(error.status)) {
-          return false;
-        }
-        const remaining = deadline - Date.now();
-        if (remaining > 0) {
-          await firstValueFrom(timer(Math.min(1_500, remaining)));
-        }
-      }
-    }
-    return false;
   }
 
   protected async poll(id: string): Promise<void> {
