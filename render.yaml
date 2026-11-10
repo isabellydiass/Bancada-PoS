@@ -1,0 +1,72 @@
+services:
+  - name: bancada-pos-recorder
+    type: web
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.backend
+    dockerContext: .
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: MODULE
+        value: recorder
+      - key: PORT
+        value: "8080"
+      - key: GATEWAY_ACCESS_REQUIRED
+        value: "true"
+      - key: GATEWAY_ACCESS_TOKEN
+        sync: false
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xms48m -Xmx192m -XX:MaxMetaspaceSize=128m -XX:ActiveProcessorCount=2"
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+        value: "4"
+      - key: SPRING_KAFKA_BOOTSTRAP_SERVERS
+        sync: false
+      - key: SPRING_APPLICATION_JSON
+        value: >-
+          {"spring":{"kafka":{"admin":{"auto-create":false},"properties":{"security.protocol":"SSL"},"ssl":{"key-store-type":"PEM","key-store-location":"file:/etc/secrets/kafka-client.pem","trust-store-type":"PEM","trust-store-location":"file:/etc/secrets/kafka-ca.pem"}}}}
+      - key: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+        value: health
+
+  - name: bancada-pos-evidence
+    type: web
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.backend
+    dockerContext: .
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: MODULE
+        value: evidence
+      - key: PORT
+        value: "8080"
+      - key: GATEWAY_ACCESS_REQUIRED
+        value: "true"
+      - key: GATEWAY_ACCESS_TOKEN
+        sync: false
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xms48m -Xmx192m -XX:MaxMetaspaceSize=128m -XX:ActiveProcessorCount=2"
+      - key: SPRING_DATA_MONGODB_URI
+        sync: false
+      - key: SPRING_KAFKA_BOOTSTRAP_SERVERS
+        sync: false
+      - key: SPRING_APPLICATION_JSON
+        value: >-
+          {"spring":{"kafka":{"admin":{"auto-create":false},"properties":{"security.protocol":"SSL"},"ssl":{"key-store-type":"PEM","key-store-location":"file:/etc/secrets/kafka-client.pem","trust-store-type":"PEM","trust-store-location":"file:/etc/secrets/kafka-ca.pem"}}}}
+      - key: REPORT_BUCKET
+        sync: false
+      - key: REPORT_S3_ENDPOINT
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+        value: health

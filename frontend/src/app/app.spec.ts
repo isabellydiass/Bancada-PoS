@@ -59,11 +59,35 @@ describe('Comparison workflow', () => {
 
   async function start(): Promise<void> {
     click('Executar comparação');
+    http.expectOne({ method: 'GET', url: '/api/readiness' }).flush(null, {
+      status: 204,
+      statusText: 'No Content',
+    });
+    await Promise.resolve();
+    await Promise.resolve();
     http
       .expectOne({ method: 'POST', url: api })
       .flush({ id }, { status: 202, statusText: 'Accepted' });
     await Promise.resolve();
   }
+
+  it('waits for the cloud services before posting a comparison', async () => {
+    vi.useFakeTimers();
+    click('Executar comparação');
+    http.expectOne('/api/readiness').flush(null, { status: 503, statusText: 'Unavailable' });
+    http.expectNone(api);
+    await vi.advanceTimersByTimeAsync(1_500);
+    http.expectOne('/api/readiness').flush(null, { status: 204, statusText: 'No Content' });
+    await Promise.resolve();
+    await Promise.resolve();
+    http.expectOne({ method: 'POST', url: api }).flush({ id }, {
+      status: 202,
+      statusText: 'Accepted',
+    });
+    await Promise.resolve();
+    http.expectOne(`${api}/${id}`).flush(result);
+    await Promise.resolve();
+  });
 
   it('keeps the execution through a pending result and a temporary outage', async () => {
     vi.useFakeTimers();

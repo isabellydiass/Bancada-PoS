@@ -46,6 +46,10 @@ cloudflared tunnel --url http://127.0.0.1:8080
 
 Share the temporary HTTPS URL printed by Cloudflare. It routes to the workbench on this machine and expires when the tunnel stops. Use the default local storage for a public demo.
 
+## Hosted deployment
+
+See [Cloudflare Pages and Render deployment](docs/cloud-deployment.md) for the remote setup.
+
 ## Verify and present
 
 Run `mvn verify` with Java 21 for the backend checks. With the Compose stack running, `python3 scripts/smoke.py` stops and restarts the evidence service, verifies the comparison, replays its Kafka event and round-trips the report. The same checks run in GitHub Actions.
