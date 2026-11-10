@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: evidence
+  data:
+    mongodb:
+      uuid-representation: standard
+  kafka:
+    consumer:
+      group-id: evidence-v1
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    listener:
+      ack-mode: record
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+report:
+  bucket: ${REPORT_BUCKET:bancada-pos-reports}
+  s3-endpoint: ${REPORT_S3_ENDPOINT:}
+  s3-mock: ${REPORT_S3_MOCK:false}
+  region: ${AWS_REGION:us-east-1}

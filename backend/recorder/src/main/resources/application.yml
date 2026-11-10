@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: recorder
+  kafka:
+    producer:
+      acks: all
+      properties:
+        "[enable.idempotence]": true
+        "[delivery.timeout.ms]": 6000
+        "[request.timeout.ms]": 3000
+        "[max.block.ms]": 3000
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

@@ -1,0 +1,116 @@
+name: bancada-pos
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: bancada
+      POSTGRES_USER: bancada
+      POSTGRES_PASSWORD: bancada-local
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bancada -d bancada"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  mongo:
+    image: mongo:7.0
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ping: 1}).ok"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+
+  kafka:
+    image: apache/kafka:4.1.1
+    environment:
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "/opt/kafka/bin/kafka-topics.sh", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 5s
+      timeout: 6s
+      retries: 20
+
+  s3mock:
+    image: adobe/s3mock:4.10.0
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: bancada-pos-reports
+      COM_ADOBE_TESTING_S3MOCK_STORE_ROOT: /s3mockroot
+      COM_ADOBE_TESTING_S3MOCK_STORE_RETAIN_FILES_ON_EXIT: "true"
+    volumes:
+      - s3mock-data:/s3mockroot
+
+  recorder:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        MODULE: recorder
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bancada
+      SPRING_DATASOURCE_USERNAME: bancada
+      SPRING_DATASOURCE_PASSWORD: bancada-local
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  evidence:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        MODULE: evidence
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/bancada
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      REPORT_BUCKET: ${REPORT_BUCKET:-bancada-pos-reports}
+      REPORT_S3_ENDPOINT: ${REPORT_S3_ENDPOINT-http://s3mock:9090}
+      REPORT_S3_MOCK: ${REPORT_S3_MOCK:-true}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID:
+      AWS_SECRET_ACCESS_KEY:
+      AWS_SESSION_TOKEN:
+    depends_on:
+      mongo:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      s3mock:
+        condition: service_started
+
+  web:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:80"
+    depends_on:
+      - recorder
+      - evidence
+
+volumes:
+  postgres-data:
+  mongo-data:
+  kafka-data:
+  s3mock-data:

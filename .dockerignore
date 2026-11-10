@@ -1,0 +1,8 @@
+.git
+.github
+docs
+frontend
+scripts
+**/target
+**/.DS_Store
+.env*

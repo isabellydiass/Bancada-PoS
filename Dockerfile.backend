@@ -1,0 +1,14 @@
+FROM maven:3.9.11-eclipse-temurin-21 AS build
+ARG MODULE
+WORKDIR /src
+COPY pom.xml .
+COPY backend ./backend
+RUN mvn --batch-mode --no-transfer-progress -pl backend/${MODULE} -am -DskipTests package \
+    && cp backend/${MODULE}/target/${MODULE}.jar /service.jar
+
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY --from=build /service.jar .
+USER 10001
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app/service.jar"]

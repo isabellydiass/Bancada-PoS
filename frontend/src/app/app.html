@@ -1,0 +1,94 @@
+<header class="site-header">
+  <div class="shell">
+    <span class="brand">Bancada PoS</span>
+    <span class="environment">Ambiente de simulação</span>
+  </div>
+</header>
+
+<main class="shell">
+  <section aria-labelledby="page-title">
+    <div class="heading">
+      <div>
+        <h1 id="page-title">Comparação de firmware</h1>
+        <p>
+          Verifique se o terminal consulta a venda original quando perde a resposta da autorização.
+        </p>
+      </div>
+      <button type="button" class="button primary" [disabled]="busy()" (click)="run()">
+        @if (busy()) {
+          <span class="activity" aria-hidden="true"></span>
+        }
+        {{ busy() ? 'Executando comparação' : 'Executar comparação' }}
+      </button>
+    </div>
+
+    <dl class="scenario" aria-label="Dados do cenário">
+      <div>
+        <dt>Cenário</dt>
+        <dd>Perda de resposta após autorização</dd>
+      </div>
+      <div>
+        <dt>Referência</dt>
+        <dd><code>1.4.0</code></dd>
+      </div>
+      <div>
+        <dt>Candidata</dt>
+        <dd><code>1.5.0</code></dd>
+      </div>
+    </dl>
+  </section>
+
+  @let current = state();
+
+  <div aria-live="polite" aria-atomic="true">
+    @switch (current.kind) {
+      @case ('idle') {
+        <section class="notice" aria-label="Evidências da comparação">
+          <h2>Nenhuma comparação executada</h2>
+          <p>Inicie uma comparação para ver as etapas e as autorizações das duas versões.</p>
+        </section>
+      }
+      @case ('starting') {
+        <section class="notice">
+          <h2>Enviando solicitação</h2>
+          <p>Aguarde a confirmação de início.</p>
+        </section>
+      }
+      @case ('waiting') {
+        <section class="notice">
+          <h2>Aguardando evidências</h2>
+          <p>
+            Execução <code>{{ current.id }}</code> em processamento.
+          </p>
+        </section>
+      }
+      @case ('error') {
+        <section class="notice notice-error">
+          <h2>Falha ao iniciar</h2>
+          <p>{{ current.message }}</p>
+        </section>
+      }
+      @case ('paused') {
+        <section class="notice notice-retry">
+          <div>
+            <h2>Consulta pausada</h2>
+            <p>{{ current.message }}</p>
+            <p class="run-id">
+              Execução <code>{{ current.id }}</code>
+            </p>
+          </div>
+          <button type="button" class="button" (click)="poll(current.id)">
+            Consultar novamente
+          </button>
+        </section>
+      }
+      @case ('ready') {
+        <span class="sr-only">Comparação concluída. Evidências disponíveis.</span>
+      }
+    }
+  </div>
+
+  @if (current.kind === 'ready') {
+    <app-comparison-result [comparison]="current.result" />
+  }
+</main>

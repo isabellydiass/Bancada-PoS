@@ -1,0 +1,112 @@
+@let result = comparison();
+<section class="evidence" aria-labelledby="evidence-title">
+  <header class="evidence-header">
+    <div>
+      <h2 id="evidence-title">Evidências da comparação</h2>
+      <p class="run-details">
+        <span
+          >Execução <code>{{ result.id }}</code></span
+        >
+        <time [attr.datetime]="result.createdAt">{{ formattedDate() }}</time>
+        <span
+          >Valor simulado <strong>{{ formattedAmount() }}</strong></span
+        >
+      </p>
+    </div>
+    <button type="button" class="button" [disabled]="exporting()" (click)="exportReport()">
+      @if (!exporting()) {
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path
+            d="M8 2v8m0 0L5 7m3 3 3-3M3 11v3h10v-3"
+            stroke="currentColor"
+            stroke-width="1.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      }
+      {{ exporting() ? 'Exportando relatório' : 'Exportar relatório' }}
+    </button>
+  </header>
+
+  <div aria-live="polite" aria-atomic="true">
+    @if (exportFeedback(); as feedback) {
+      <p class="export-feedback" [class.error]="feedback.error">{{ feedback.message }}</p>
+    }
+  </div>
+
+  @if (result.firstDifference !== null) {
+    <div class="finding">
+      <h3>Primeira divergência na etapa {{ result.firstDifference }}</h3>
+      <p>
+        A candidata iniciou uma nova venda após o timeout. A mesma compra ficou com duas
+        autorizações.
+      </p>
+    </div>
+  }
+
+  <table>
+    <caption class="sr-only">
+      Linha do tempo das autorizações por versão de firmware
+    </caption>
+    <thead>
+      <tr>
+        @for (firmware of [result.baseline, result.candidate]; track $index) {
+          <th scope="col">
+            <div class="firmware-heading">
+              <span
+                >{{ $index === 0 ? 'Referência' : 'Candidata' }}
+                <code>{{ firmware.firmware }}</code></span
+              >
+              <span class="verdict" [class.regression]="firmware.verdict === 'REGRESSION'">
+                {{ firmware.verdict === 'PASS' ? 'Aprovado' : 'Regressão' }}
+              </span>
+            </div>
+          </th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row.order) {
+        <tr [class.difference]="row.order === result.firstDifference">
+          @for (step of row.steps; track $index) {
+            <td>
+              <div class="step">
+                <span class="step-number" aria-hidden="true">
+                  {{ row.order.toString().padStart(2, '0') }}
+                </span>
+                <div>
+                  <span class="sr-only">Etapa {{ row.order }}. </span>
+                  @if (step) {
+                    <p>{{ step.description }}</p>
+                    <code>{{ step.code }}</code>
+                  } @else {
+                    <p class="missing-step">Sem registro nesta etapa</p>
+                  }
+                </div>
+              </div>
+            </td>
+          }
+        </tr>
+      }
+    </tbody>
+    <tfoot>
+      <tr>
+        @for (firmware of [result.baseline, result.candidate]; track $index) {
+          <td>
+            <p class="authorization-summary">
+              Autorizações registradas <strong>{{ firmware.authorizationIds.length }}</strong>
+            </p>
+            <ul class="authorization-ids" aria-label="Identificadores das autorizações">
+              @for (id of firmware.authorizationIds; track id) {
+                <li>
+                  <code>{{ id }}</code>
+                </li>
+              }
+            </ul>
+          </td>
+        }
+      </tr>
+    </tfoot>
+  </table>
+</section>
