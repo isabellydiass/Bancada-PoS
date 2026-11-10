@@ -20,7 +20,7 @@ async function isReady(origin, token) {
     const response = await fetch(origin + '/actuator/health', {
       headers: { 'X-Bancada-Gateway': token },
       signal: AbortSignal.timeout(8_000),
-      redirect: 'error',
+      redirect: 'manual',
     });
     return response.ok && (await response.json()).status === 'UP';
   } catch {
@@ -58,8 +58,10 @@ export default {
       const upstream = await fetch((isRecord ? recorder : projection) + pathname, {
         method: request.method,
         headers: { 'X-Bancada-Gateway': token, Accept: 'application/json' },
-        redirect: 'error',
+        // Keep the gateway token on the configured origin. Workers supports manual redirects.
+        redirect: 'manual',
       });
+      if (upstream.status >= 300 && upstream.status < 400) return unavailable();
       const contentType = upstream.headers.get('Content-Type');
       if (contentType?.includes('text/html')) return unavailable();
 

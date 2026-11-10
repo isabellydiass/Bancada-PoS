@@ -31,6 +31,8 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm test -- --watch=false
+      - name: Verify Pages gateway
+        run: node --test deploy/cloudflare/worker.test.mjs
       - name: Build the application and start dependencies
         run: docker compose up --build -d
       - name: Verify the workflow through HTTP

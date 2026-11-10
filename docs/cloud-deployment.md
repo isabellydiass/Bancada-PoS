@@ -4,19 +4,40 @@ Cloudflare Pages serves the Angular app and forwards its API calls to two Render
 
 ## Data services
 
-- In Aiven, create one Free PostgreSQL service and one Free Kafka service. In Kafka, create the `comparison.recorded.v1` topic and use the TLS client certificate connection option.
+- In Aiven, create one Free PostgreSQL service and one Free Kafka service. In Kafka, create the `comparison.recorded.v1` topic and select the SASL connection with the project CA.
 - In Atlas, create an M0 cluster and a database user with read/write access to `bancada`. Allow the outbound CIDR ranges shown by the Render evidence service. Include the database name in the connection URI.
 - In Backblaze, create a private bucket and a bucket-scoped application key with read and write access. Use the S3 endpoint and region shown for the bucket.
 
 ## Render
 
-Create the two Docker web services with the Free compute plan using `render.yaml`. The recorder uses the PostgreSQL JDBC URL and credentials. Use a JDBC URL of the form:
+Create the two Docker web services with the Free compute plan. Use `render.yaml` for the service settings. Add the Aiven project CA as `aiven-ca.pem` under Secret Files in both services. Set the recorder's PostgreSQL credentials and use this JDBC URL format:
 
 ```text
-jdbc:postgresql://HOST:PORT/DB?sslmode=verify-full&sslrootcert=/etc/secrets/postgres-ca.pem
+jdbc:postgresql://HOST:PORT/DB?sslmode=verify-full&sslrootcert=/etc/secrets/aiven-ca.pem
 ```
 
-In both services, set `SPRING_KAFKA_BOOTSTRAP_SERVERS` to the Aiven TLS hostname and port. Add `kafka-ca.pem` and `kafka-client.pem` as Render secret files. The client file contains the service certificate and its PKCS#8 private key. Add `postgres-ca.pem` to the recorder. The evidence service uses the MongoDB URI and the Backblaze bucket endpoint, region and application key.
+In both services, set `SPRING_KAFKA_BOOTSTRAP_SERVERS` to the Aiven SASL host and port. Set `SPRING_APPLICATION_JSON` with the following Spring Kafka configuration. Replace the placeholders with the Kafka service user's credentials in Render.
+
+```json
+{
+  "spring": {
+    "kafka": {
+      "admin": { "auto-create": false },
+      "properties": {
+        "security.protocol": "SASL_SSL",
+        "sasl.mechanism": "SCRAM-SHA-256",
+        "sasl.jaas.config": "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"USERNAME\" password=\"PASSWORD\";"
+      },
+      "ssl": {
+        "trust-store-type": "PEM",
+        "trust-store-location": "file:/etc/secrets/aiven-ca.pem"
+      }
+    }
+  }
+}
+```
+
+The evidence service uses the MongoDB URI and the Backblaze bucket endpoint, region and application key. Limit the application key to the report prefix and set `REPORT_BUCKET` and `REPORT_S3_ENDPOINT` so the SDK uses the private B2 bucket.
 
 Generate a random gateway token and set the same value as `GATEWAY_ACCESS_TOKEN` in both Render services and in Pages. The gateway adds the token server-side. The browser calls only the Pages address.
 

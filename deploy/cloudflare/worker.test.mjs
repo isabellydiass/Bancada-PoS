@@ -21,6 +21,7 @@ test('serves assets and only forwards supported API requests', async (context) =
   assert.equal((await worker.fetch(request('/api/comparisons', 'POST'), env)).status, 204);
   assert.equal(fetchMock.mock.calls[0].arguments[0], env.RECORDER_ORIGIN + '/api/comparisons');
   assert.equal(fetchMock.mock.calls[0].arguments[1].headers['X-Bancada-Gateway'], 'test-token');
+  assert.equal(fetchMock.mock.calls[0].arguments[1].redirect, 'manual');
   await worker.fetch(request('/api/comparisons/' + id + '/report'), env);
   assert.equal(fetchMock.mock.calls[1].arguments[0], env.EVIDENCE_ORIGIN + '/api/comparisons/' + id + '/report');
 });
@@ -29,9 +30,12 @@ test('waits for both services and treats a wake-up page as unavailable', async (
   const mocked = context.mock.method(globalThis, 'fetch', async () => Response.json({ status: 'UP' }));
   assert.equal((await worker.fetch(request('/api/readiness'), env)).status, 204);
   assert.equal(mocked.mock.callCount(), 2);
+  assert.ok(mocked.mock.calls.every(({ arguments: [, options] }) => options.redirect === 'manual'));
   mocked.mock.mockImplementation(async () => new Response('<html>', {
     headers: { 'Content-Type': 'text/html' },
   }));
   assert.equal((await worker.fetch(request('/api/readiness'), env)).status, 503);
+  assert.equal((await worker.fetch(request('/api/comparisons', 'POST'), env)).status, 503);
+  mocked.mock.mockImplementation(async () => Response.redirect('https://other.example.com', 307));
   assert.equal((await worker.fetch(request('/api/comparisons', 'POST'), env)).status, 503);
 });

@@ -9,6 +9,8 @@ A firmware regression workbench for a simulated payment terminal. Compare two ve
 
 The workbench marks the candidate as a regression and points to the first step that changed. Everything in the scenario is simulated.
 
+[Try the live demo](https://bancada-pos.pages.dev). The first run can take longer while the hosted services start.
+
 ## Run the workbench
 
 Start Docker, then run:
@@ -35,16 +37,6 @@ Named volumes retain records and reports between runs. The web entry point binds
 PostgreSQL is the durable record of what the simulator produced. MongoDB serves the screen a document with both step sequences. The read service can fall behind without preventing the recorder from accepting new comparisons. The extra database and broker are a deliberate trade-off for demonstrating recovery across service boundaries.
 
 S3Mock is the default report store. The evidence service uses the AWS SDK for Java in both modes. For a private Amazon S3 bucket, configure `REPORT_BUCKET` and `AWS_REGION`, set `REPORT_S3_MOCK=false` and `REPORT_S3_ENDPOINT=`, and supply temporary credentials through the SDK's default credential provider chain. Compose forwards `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_SESSION_TOKEN` from the caller when set. The service only needs to put and get objects within the report prefix.
-
-## Share a temporary demo
-
-With the local stack running and `cloudflared` installed, run:
-
-```sh
-cloudflared tunnel --url http://127.0.0.1:8080
-```
-
-Share the temporary HTTPS URL printed by Cloudflare. It routes to the workbench on this machine and expires when the tunnel stops. Use the default local storage for a public demo.
 
 ## Hosted deployment
 
