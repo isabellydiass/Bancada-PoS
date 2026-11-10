@@ -11,22 +11,6 @@ The workbench marks the candidate as a regression and points to the first step t
 
 [Try the live demo](https://bancada-pos.pages.dev). The first run can take longer while the hosted services start.
 
-## Run the workbench
-
-Start Docker, then run:
-
-```sh
-docker compose up --build
-```
-
-Open [localhost:8080](http://localhost:8080). Select **Executar comparação** and inspect the two timelines. Once the result appears, save and download its JSON report. The initial build downloads dependencies and images. Set `APP_PORT` before startup to use a different port.
-
-```sh
-docker compose down
-```
-
-Named volumes retain records and reports between runs. The web entry point binds to loopback. The databases, broker, and object store are on the Compose network.
-
 ## How a comparison reaches the screen
 
 1. Angular submits `POST /api/comparisons`. The Java 21/Spring Boot recorder runs the scenario and commits the result and an outbox row in PostgreSQL. It returns `202` and the comparison ID.
