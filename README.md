@@ -20,7 +20,7 @@ The workbench marks the candidate as a regression and points to the first step t
 
 PostgreSQL is the durable record of what the simulator produced. MongoDB serves the screen a document with both step sequences. The read service can fall behind without preventing the recorder from accepting new comparisons. The extra database and broker are a deliberate trade-off for demonstrating recovery across service boundaries.
 
-S3Mock is the default report store. The evidence service uses the AWS SDK for Java in both modes. For a private Amazon S3 bucket, configure `REPORT_BUCKET` and `AWS_REGION`, set `REPORT_S3_MOCK=false` and `REPORT_S3_ENDPOINT=`, and supply temporary credentials through the SDK's default credential provider chain. Compose forwards `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_SESSION_TOKEN` from the caller when set. The service only needs to put and get objects within the report prefix.
+The evidence service uses the AWS SDK for Java to save and retrieve reports through the S3 API. The hosted demo uses a private Backblaze B2 bucket. The test environment uses S3Mock.
 
 ## Hosted deployment
 
@@ -28,8 +28,8 @@ See [Cloudflare Pages and Render deployment](docs/cloud-deployment.md) for the r
 
 ## Verify and present
 
-Run `mvn verify` with Java 21 for the backend checks. With the Compose stack running, `python3 scripts/smoke.py` stops and restarts the evidence service, verifies the comparison, replays its Kafka event and round-trips the report. The same checks run in GitHub Actions.
+Run `mvn verify` with Java 21 for the backend checks. GitHub Actions also runs an integration test that stops and restarts the evidence service, verifies the comparison, replays its Kafka event, and checks that the saved report matches the downloaded file.
 
-Use `docker compose logs recorder evidence` to follow the comparison ID across the services. Actuator exposes the projection and duplicate counters inside the Compose network. The `comparison.projection.delay` timer measures the delay between recording and the first successful projection.
+The recorder and evidence logs share the comparison ID so an execution can be traced across services. Actuator exposes the projection and duplicate counters in the test environment. The `comparison.projection.delay` timer measures the delay between recording and the first successful projection.
 
 [Interactive presentation in Portuguese](docs/Bancada-PoS.pdf). Download it and open it in a PDF viewer to use the menu and page links.
